@@ -1,56 +1,83 @@
 class Vertiginous
+  def timeval(value)
+    return lambda do
+      value
+    end
+  end
+  
+  def randval
+    return lambda do
+      1/([1,2,3,4,8,9,12,16,24,32].choose.to_f)
+    end
+  end
   def initialize(parent, bpm=80)
+    puts "HI"
+    srand(Time.now.to_i)
     @parent = parent
+    @parent.puts (1..24).map { @parent.scale(:d4, :major_pentatonic).choose }.inspect
     @parent.use_bpm bpm
+    @instruments = {
+      lead: :chiplead,
+      bass: :subpulse,
+      chords: :fm
+    }
+    v = ((1..24).map { @parent.scale(:d4, :major_pentatonic).choose } ).map { |x| [x, :random] }
+    @parent.puts v.inspect
     @seqs = {
       lead: [
-        [:c4, :e4, :g4, :f4, :g4],
-        [:c4, :g4, :gs4, :g4, :d4],
+        
+        (1..24).map { @parent.scale(:d4, :major_pentatonic).choose },
+        (1..36).map { @parent.scale(:d4, :major).choose },
+        #((1..24).map { @parent.scale(:d4, :major_pentatonic).choose } ).map { |x| y = randval.call; @parent.puts y; [x, y] }
       ],
       bass: [
         [
-          [:c2, :sixth],
-          [:c3, :sixth],
-          [:g2, :sixth],
-          [:c3, :third],
-          [:f2, :third],
-          [:ab2,:third],
-          [:c2, 1.5],
+          [:d2, :sixth],
+          [:d3, :sixth],
+          [:a2, :sixth],
+          [:d3, :third],
+          [:g2, :third],
+          [:cs2,:third],
+          [:d2, 1.5],
         ]
       ],
       chords: [
         [
-          [@parent.chord(:c3, :minor), :whole],
-          [@parent.chord(:g3, :minor), :whole],
-          [@parent.chord(:ab3, :major), :whole],
-          [@parent.chord(:eb3, :major), :whole],
-          [@parent.chord(:f3, :minor), :whole],
-          [@parent.chord(:c3, :minor), :whole],
-          [@parent.chord(:f3, :minor), :whole],
-          [@parent.chord(:g3, :minor), :whole]
+          [@parent.chord(:d3, :major), :fourbar],
+          [@parent.chord(:a3, :major), :fourbar],
+          [@parent.chord(:b3, :minor), :fourbar],
+          [@parent.chord(:fs3, :minor), :fourbar],
+          [@parent.chord(:g3, :major), :fourbar],
+          [@parent.chord(:d3, :major), :fourbar],
+          [@parent.chord(:g3, :major), :fourbar],
+          [@parent.chord(:a3, :major), :fourbar]
         ]
       ]
     }
     @note_lengths = {
-      whole:     1,
-      half:      2,
-      triplet:   3,
-      third:     3,
-      quarter:   4,
-      sextuplet: 6,
-      sixth:     6,
-      eighth:    8,
+      fourbar:   timeval(0.25),
+      twobar:    timeval(0.5),
+      whole:     timeval(1),
+      half:      timeval(2),
+      triplet:   timeval(3),
+      third:     timeval(3),
+      quarter:   timeval(4),
+      sextuplet: timeval(6),
+      sixth:     timeval(6),
+      eighth:    timeval(8),
+      random:    randval,
     }
   end
   
   def note_length (length)
-    
-    if length.is_a? Symbol and @note_lengths[length]
-      return @note_lengths[length]
+    if length.respond_to? :call
+      return length.call
+    elsif length.is_a? Symbol and @note_lengths[length]
+      return @note_lengths[length].call
     elsif length.is_a? Numeric
       return length.to_f
     else
-      return 3 # :triplet default
+      return 3.0 # :triplet default
     end
   end
   
@@ -67,13 +94,12 @@ class Vertiginous
           [element, 3] #defunct default
         end
       }
-      instrument = :chiplead
-      @parent.use_synth instrument
+      @parent.use_synth @instruments[section]
       seq.each do |element|
         note, divisor = element[0], element[1]
         @parent.puts "inst: #{section}, note: #{note}, divisor: #{divisor}"
         if section == :chords
-          @parent.play_chord note, release: 1/3.0, amp: 4
+          @parent.play_chord note, release: 4, amp: 4
         else
           @parent.play note, release: 1/6.0
         end
@@ -88,8 +114,8 @@ class Vertiginous
     end
     
     @parent.live_loop :bd do
-      @parent.sample :bd_tek
-      @parent.sleep (@parent.ring 2, 0.5, 1, 0.5, 2).tick
+      @parent.sample :bd_tek, amp: 4
+      @parent.sleep (@parent.ring 1/0.5, 1/2.0, 1, 1/2.0, 1/0.5, 1/3.0, 1/3.0, 1/3.0, 1, 1/6.0, 1/6.0, 1/6.0, 1/1.5, 1/3.0).tick
     end
     
     @parent.live_loop :sd do
@@ -102,10 +128,17 @@ class Vertiginous
       @parent.sample :drum_cymbal_closed if @parent.one_in(1)
       @parent.sleep 1/3.0
     end
+    @parent.live_loop :cym do
+      @parent.sleep 1/3.0
+      @parent.sample :drum_cymbal_soft if @parent.one_in(4)
+      @parent.sleep 1-(1/3.0)
+    end
   end
 end
 song = Vertiginous.new(self)
 song.run
+
+
 
 
 
