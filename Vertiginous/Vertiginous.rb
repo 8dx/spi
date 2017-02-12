@@ -133,6 +133,16 @@ class Vertiginous
       @parent.sample :drum_cymbal_soft if @parent.one_in(4)
       @parent.sleep 1-(1/3.0)
     end
+    @parent.live_loop :crsh do
+      @parent.sample :drum_splash_soft if @parent.one_in(6)
+      @parent.sleep 1
+    end
+    @parent.live_loop :amen do
+      @parent.with_fx :slicer, pulse_width: 0.75, wave: 0, prob_pos: 0.3, probability: 0.4 do
+        @parent.sample :loop_amen_full, beat_stretch: 8
+        @parent.sleep 8
+      end
+    end
   end
 end
 song = Vertiginous.new(self)
